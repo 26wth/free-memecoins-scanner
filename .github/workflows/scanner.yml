@@ -1,0 +1,40 @@
+name: News scanner
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: memecoin-scanner
+  cancel-in-progress: false
+jobs:
+  scan:
+    if: ${{ github.event.repository.private == false && vars.SCANNER_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Scan news and send alerts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scanner.py
+      - name: Save public scanner state
+        if: always()
+        run: |
+          if [ -f state/state.json ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add state/state.json
+            if ! git diff --cached --quiet; then
+              git commit -m 'Update scanner state'
+              git pull --rebase
+              git push
+            fi
+          fi
