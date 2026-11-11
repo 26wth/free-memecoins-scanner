@@ -1,6 +1,6 @@
-# Free news-to-memecoin alerts
+# Free early memecoin alerts
 
-This project sends alerts only. It never connects a wallet, buys, or sells. It uses free RSS feeds, simple Python rules, DEX Screener, GoPlus, Telegram, and GitHub Actions. It does **not** use your ChatGPT Plus subscription or any paid AI or X API. The ranking is a basic word-based heuristic, not an AI model, and it cannot understand or verify stories like a person.
+This project sends alerts only. It never connects a wallet, buys, or sells. It uses free RSS feeds, simple Python rules, DEX Screener, GoPlus, Telegram, and GitHub Actions. It does **not** use your ChatGPT Plus subscription or any paid AI or X API. It looks for early trading momentum and adds narrative context where available.
 
 ## Before you start
 
@@ -23,13 +23,14 @@ On GitHub, open your repository's **Actions** tab, choose **Telegram test**, the
 
 ## 4. Start scanning
 
-After the Telegram test succeeds, go to **Settings → Secrets and variables → Actions → Variables**, add a repository variable named `SCANNER_ENABLED` with the value `true`. The **News scanner** workflow is then scheduled for every five minutes. You can also open it in Actions and choose **Run workflow**. It reads feeds for recent headlines, ranks stories using free rules, searches Solana pools and sends a message for a close word match. It continues trying an accepted headline until one hour after its publication, subject to scheduled runs and processing limits. The state file is saved back to your public repository to reduce repeats; the news titles, links, token addresses and event history in that file and Git history are public. Never put personal data or credentials in that file.
+Set the Actions repository variable `SCANNER_ENABLED` to `true`. The existing Telegram secrets and **News scanner** workflow run the scanner every five minutes, subject to GitHub's scheduling delays.
 
-## What the alerts mean
+The tracker combines global, per-network, and launchpad market feeds into one ranking. It attempts discovery across all 19 configured networks and has dedicated feeds for Pump.fun, PumpSwap, Raydium LaunchLab, Stonkfun, Pons, and Long.xyz. Other venues can appear in indexed network feeds. There is no verified dedicated Noxafun feed. Discovery can be partial when a provider rate-limits requests or has no data.
 
-- Strict matching requires **two distinctive headline words** in the coin name or symbol, plus minimum liquidity and volume. This reduces noise but can miss most genuine meme coins, nicknames and different spellings. A match is not proof of a connection. News and token names can be false or copied.
-- Pool age is not necessarily token age. Market cap, liquidity and 24-hour volume can be missing, stale or manipulated. Missing market cap is shown as unknown. GoPlus checks only a few risk flags; missing checks are unknown and no result proves safety or sellability.
-- The scanner uses selected English-language feeds and keyword rules. It can discover subjects beyond the examples but cannot monitor all breaking news or X. Search results and indexed pools can be incomplete. At most 12 active stories are searched per run; old or crowded stories may be missed. Thresholds and feed lists are in `scanner.py`.
-- GitHub's scheduled runs may be delayed or dropped, and may be disabled after 60 days of repository inactivity. They run only from the default branch. Free service limits, network errors, failed pushes, manual edits, overlapping runs, or a shutdown after an alert but before state is saved can cause missed or duplicate alerts. Check Actions regularly. This is not guaranteed continuous monitoring.
+Candidates need 15–25 minutes of observations, at least $10,000 in reported pool liquidity, a pool at most 90 minutes old, and market cap or FDV at most $500,000. The bot looks for buy counts and volume building without a late price spike or a material drop in liquidity. It skips ambiguous same-name coins, limits sends to two per run and five per rolling day, and remembers an alerted network and contract for 30 days. Pool age can differ from token age.
 
-Sources: [GitHub billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions), [GitHub schedule limits](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule), [DEX Screener API](https://docs.dexscreener.com/api/reference), [GoPlus limits](https://docs.gopluslabs.io/reference/support), [Telegram Bot API](https://core.telegram.org/bots/api).
+Each alert includes the coin, possible headline or project description, all distinct project links returned by the available metadata, contract, market cap, liquidity, volume windows, network, launchpad when identified, and chart. Project-listed links are labeled. A coin can qualify without a narrative. There is no direct X feed or signed-in Axiom or Fomo access.
+
+GoPlus holder and required contract fields must be present. Solana also requires a fresh linked-wallet summary from the free Bubbles service, which is separate from Bubblemaps. Supported EVM networks use stricter holder concentration checks when a wallet map is unavailable. Networks missing a usable holder and risk source are discovery-only. Checks can miss risks and do not prove liquidity is locked, a project is original, or a token can be sold later. The scanner does not estimate trade outcomes.
+
+Sources: [GeckoTerminal](https://api.geckoterminal.com/docs/index.html), [DEX Screener](https://docs.dexscreener.com/api/reference), [GoPlus](https://docs.gopluslabs.io/reference/tokensecurityusingget_1), [Bubbles](https://bubblemaps.dev/api), [X pricing](https://docs.x.com/x-api/getting-started/pricing), and [GitHub schedule limits](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).

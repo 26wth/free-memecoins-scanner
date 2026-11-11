@@ -206,5 +206,7 @@ def scan(state, now):
 
 
 if __name__ == '__main__':
+    from runners import run
+
     logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
-    scan(load_state(), time.time())
+    run(load_state(), fetch_news, save_state, send)
