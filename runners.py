@@ -165,10 +165,13 @@ def discovery(started):
     # One shared pool of candidates. Pace requests across all networks because
     # the public provider limits calls per minute for the entire runner.
     chain_ids = list(CHAINS)
-    offset = int(started // 300) % len(chain_ids)
+    slot = int(started // 300)
+    offset = slot * 7 % len(chain_ids)
     chain_ids = chain_ids[offset:] + chain_ids[:offset]
     chain_paths = [f'networks/{chain}/new_pools' for chain in chain_ids]
     venue_paths = [f'networks/{chain}/dexes/{venue}/pools' for chain, venue in VENUE_FEEDS]
+    venue_offset = slot % len(venue_paths)
+    venue_paths = venue_paths[venue_offset:] + venue_paths[:venue_offset]
     paths = ['networks/new_pools', 'networks/trending_pools']
     # Alternate network and venue requests, then collect every result before ranking.
     for index, path in enumerate(chain_paths):
@@ -179,10 +182,13 @@ def discovery(started):
     completed = 0
     next_request = time.monotonic()
     for path in paths:
-        if time.time() - started >= 190:
+        delay = max(0, next_request - time.monotonic())
+        if time.time() - started + delay >= 175:
             break
-        time.sleep(max(0, next_request - time.monotonic()))
-        next_request = time.monotonic() + 6.7
+        time.sleep(delay)
+        # Public limits fluctuate. A 12.5s interval avoids exceeding even
+        # five calls per minute on a single runner.
+        next_request = time.monotonic() + 12.5
         try:
             rows.extend(parse_gecko(get(f'{GT}/{path}', include='base_token,dex'), path))
             completed += 1
@@ -190,7 +196,8 @@ def discovery(started):
             status = error.response.status_code if error.response is not None else 'unknown'
             LOG.warning('Discovery %s returned HTTP %s', path, status)
             if status == 429:
-                break
+                retry_after = number(error.response.headers.get('Retry-After'), 62)
+                next_request = time.monotonic() + max(12.5, retry_after)
         except (requests.RequestException, ValueError, TypeError, AttributeError):
             LOG.warning('Discovery failed for %s', path)
     LOG.info('Discovery completed %s/%s feeds, %s pool rows', completed, len(paths), len(rows))
@@ -246,7 +253,8 @@ def enrich(rows, tracked, profiles, now):
         ordered = sorted(mints, key=lambda mint: (
             f'{chain}:{mint}' not in tracked,
             -max((c['liquidity'] for c in by_key[f'{chain}:{mint}']), default=0), mint))
-        requests_to_make.append((chain, ordered[:30]))
+        if ordered:
+            requests_to_make.append((chain, ordered[:30]))
 
     def fetch(batch):
         chain, mints = batch

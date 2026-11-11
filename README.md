@@ -19,13 +19,13 @@ On your Mac, open Terminal, go to this project folder, and run `python3 setup_te
 
 ## 3. Send the Telegram test first
 
-On GitHub, open your repository's **Actions** tab, choose **Telegram test**, then **Run workflow**. Wait for the run to finish and check Telegram for the test message. If it fails, open the run to see the error, then check your secrets and that you sent a message to the correct bot. Do not share your token or a screenshot containing it. The scanner has passed isolated unit tests; the Telegram test has not yet been sent. The first real test requires your secrets.
+On GitHub, open your repository's **Actions** tab, choose **Telegram test**, then **Run workflow**. Wait for the run to finish and check Telegram for the test message. If it fails, open the run to see the error, then check your secrets and that you sent a message to the correct bot. Do not share your token or a screenshot containing it. A Telegram test in a new repository requires your secrets.
 
 ## 4. Start scanning
 
 Set the Actions repository variable `SCANNER_ENABLED` to `true`. The existing Telegram secrets and **News scanner** workflow run the scanner every five minutes, subject to GitHub's scheduling delays.
 
-The tracker combines global, per-network, and launchpad market feeds into one ranking. It attempts discovery across all 19 configured networks and has dedicated feeds for Pump.fun, PumpSwap, Raydium LaunchLab, Stonkfun, Pons, and Long.xyz. Other venues can appear in indexed network feeds. There is no verified dedicated Noxafun feed. Discovery can be partial when a provider rate-limits requests or has no data.
+The tracker combines global, per-network, and launchpad market feeds into one ranking. The global feeds run every scan, and the tracker rotates individual feeds across all 19 configured networks within the free request budget. It has dedicated feeds for Pump.fun, PumpSwap, Raydium LaunchLab, Stonkfun, Pons, and Long.xyz. Other venues can appear in indexed network feeds. There is no verified dedicated Noxafun feed. Discovery can be partial when a provider rate-limits requests or has no data.
 
 Candidates need 15–25 minutes of observations, at least $10,000 in reported pool liquidity, a pool at most 90 minutes old, and market cap or FDV at most $500,000. The bot looks for buy counts and volume building without a late price spike or a material drop in liquidity. It skips ambiguous same-name coins, limits sends to two per run and five per rolling day, and remembers an alerted network and contract for 30 days. Pool age can differ from token age.
 
