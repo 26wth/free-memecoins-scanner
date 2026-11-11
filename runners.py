@@ -40,13 +40,13 @@ VENUES = {
     'pump-fun': 'Pump.fun', 'pumpfun': 'Pump.fun', 'pumpswap': 'Pump.fun (PumpSwap)',
     'pump-swap': 'Pump.fun (PumpSwap)', 'stonkfun': 'Stonkfun',
     'raydium-launchlab': 'Raydium LaunchLab', 'launchlab': 'Raydium LaunchLab',
-    'pons-dot-family': 'Pons', 'pons-v2': 'Pons V2', 'long-xyz': 'Long.xyz',
+    'pons-dot-family': 'Pons', 'pons-v2': 'Pons V2', 'pons-v2-dex': 'Pons V2', 'long-xyz': 'Long.xyz',
     'noxafun': 'Noxafun', 'noxa-fun': 'Noxafun', 'four-meme': 'Four.meme',
 }
 VENUE_FEEDS = [
-    ('solana', 'pump-fun'), ('solana', 'pump-swap'), ('solana', 'raydium-launchlab'),
+    ('solana', 'pump-fun'), ('solana', 'pumpswap'), ('solana', 'raydium-launchlab'),
     ('solana', 'stonkfun'), ('robinhood', 'pons-dot-family'),
-    ('robinhood', 'long-xyz'),
+    ('robinhood', 'pons-v2-dex'), ('robinhood', 'long-xyz'),
 ]
 MIN_AGE = 15 * 60
 MAX_WINDOW = 25 * 60
@@ -598,6 +598,7 @@ def run(state, fetch_news, save_state, send):
     # compete in one ranking across chains and launchpads.
     selected = [(coin, previous) for coin, previous in eligible if CHAINS[coin['chain']][2]][:16]
     alerts = 0
+    risk_rejections = defaultdict(int)
     remaining = min(MAX_ALERTS, max(0, MAX_ALERTS_PER_DAY - sum(
         started - timestamp < DAY for timestamp in sent.values()
     )))
@@ -610,6 +611,8 @@ def run(state, fetch_news, save_state, send):
             if (risk is None or risk['risky'] or (risk['count'] is not None and risk['count'] < 40)
                     or risk['top'] > (.12 if sol else .08)
                     or risk['top10'] > (.45 if sol else .35)):
+                reason = 'missing holder data' if risk is None else 'risk flags or holder thresholds'
+                risk_rejections[reason] += 1
                 tracked.pop(key, None)
                 continue
             samples = previous + [sample(coin, now, risk['count'])]
@@ -660,3 +663,4 @@ def run(state, fetch_news, save_state, send):
     save_state(state)
     LOG.info('Pools: %s | watchable: %s | watched: %s | alerts sent: %s',
              len(by_key), len(eligible), len(state['runner_watch']), alerts)
+    LOG.info('Risk checks attempted: %s | withheld: %s', len(selected), dict(risk_rejections))
